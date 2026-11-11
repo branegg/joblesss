@@ -259,6 +259,24 @@ textarea.input { min-height: 11rem; line-height: 1.5; }
 .tally td.num, .tally th.num { text-align: right; }
 .tally tr:last-child td { border-bottom: 0; }
 .tally-wrap { background: var(--sheet); border: 1px solid var(--rule); border-radius: 4px; overflow-x: auto; }
+.stand td { vertical-align: top; }
+.stand .muted { color: var(--ink-soft); }
+.stand-role { color: var(--ink); text-decoration: none; }
+.stand-role:hover { text-decoration: underline; }
+.stand-closed td { color: var(--ink-soft); }
+.stand-closed .row-title, .stand-closed .stand-role { color: var(--ink-soft); font-weight: 400; }
+.stand-role-inline { display: none; }
+@media (max-width: 720px) {
+  .stand-role-col { display: none; }
+  .stand-role-inline { display: block; }
+  .stand th, .stand td { padding-inline: 0.625rem; }
+}
+.call-booked { background: var(--seal-wash); color: var(--seal); border-radius: 4px; padding: 0.0625rem 0.4375rem; font-weight: 600; white-space: nowrap; }
+.call-control { margin-top: 0.25rem; font-size: 0.8125rem; }
+.call-control > summary { cursor: pointer; color: var(--ink-soft); }
+.call-form { display: flex; gap: 0.5rem; align-items: flex-end; flex-wrap: wrap; margin: 0.5rem 0 0.25rem; }
+.call-form .field { margin: 0; }
+@media (max-width: 720px) { .call-booked { white-space: normal; } }
 
 .prose { max-width: 68ch; font-size: 0.9375rem; line-height: 1.55; }
 .prose > * + * { margin-top: 0.8em; }

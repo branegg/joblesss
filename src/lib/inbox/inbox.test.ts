@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { openDb } from "../../db";
 import { agentRuns, events } from "../../db/schema";
 import { addApplication, applicationsToAskAbout, deleteApplication, FOLLOW_UP, getApplication, moveStage, recordFormStarted, undoLastMove } from "../tracker";
-import { acceptFinding, applicationsToCheck, buildInboxPrompt, ignoreFinding, pendingFindings, recentFindings, recordFindings } from "./inbox";
+import { acceptFinding, applicationsToCheck, buildInboxPrompt, FINDINGS_JSON_SCHEMA, findingsSchema, ignoreFinding, pendingFindings, recentFindings, recordFindings } from "./inbox";
 
 const DAY = 24 * 60 * 60 * 1000;
 const iso = (offsetDays = 0) => new Date(Date.now() + offsetDays * DAY).toISOString();
@@ -152,5 +152,15 @@ describe("asking whether you sent it", () => {
     db.update(events).set({ at: new Date(Date.now() - 5 * DAY) }).run();
     moveStage(db, id, "submitted");
     expect(applicationsToAskAbout(db)).toEqual([]);
+  });
+});
+
+describe("calls in what the check reports", () => {
+  it("reads calls when there are some and an empty list when there aren't", () => {
+    const call = { applicationId: 1, eventId: "e1", start: "2026-11-14T09:00:00-05:00", title: "Interview", confidence: "high" };
+    expect(findingsSchema.parse({ findings: [], calls: [call] }).calls).toEqual([call]);
+    expect(findingsSchema.parse({ findings: [] }).calls).toBeUndefined();
+    expect(FINDINGS_JSON_SCHEMA.properties.calls.items.required).toEqual(["applicationId", "eventId", "start", "title", "confidence"]);
+    expect(FINDINGS_JSON_SCHEMA.required).toEqual(["findings"]);
   });
 });

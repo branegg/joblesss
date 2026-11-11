@@ -39,6 +39,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                     Applications
                     {due > 0 ? <span className="count" aria-label={`${due} next steps due`}>{due}</span> : open > 0 && <span className="nav-total">{open}</span>}
                   </NavLink>
+                  <NavLink href="/stand">Where things stand</NavLink>
                   <NavLink href="/jobs">Jobs</NavLink>
                   <NavLink href="/email">
                     Email

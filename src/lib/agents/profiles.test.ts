@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import { describe, expect, it } from "vitest";
-import { buildArgs, buildEnv, checkTools, GMAIL_READ, otherServers, PROFILES, serversFromList, unexpectedToolUse } from "./profiles";
+import { buildArgs, buildEnv, CALENDAR_BLOCKED, CALENDAR_READ, checkTools, GMAIL_READ, otherServers, PROFILES, serversFromList, unexpectedToolUse } from "./profiles";
 import { isCvName, parseSources, sourceRules } from "./sources";
 
 const flagValue = (args: string[], flag: string) => args[args.indexOf(flag) + 1];
@@ -169,6 +169,36 @@ describe("the folders profile-import may read", () => {
 describe("the example settings", () => {
   it("sources.example.yaml is valid", () => {
     expect(parseSources(fs.readFileSync("sources.example.yaml", "utf8"), "/home/me").cvFolders).toEqual(["/home/me/Documents/CVs"]);
+  });
+});
+
+describe("the email check and the calendar", () => {
+  it("lets the email check read the calendar but never change it", () => {
+    const args = buildArgs(PROFILES.inbox, { prompt: "x" });
+    const blocked = flagValue(args, "--disallowedTools").split(",");
+    for (const tool of CALENDAR_BLOCKED) expect(blocked).toContain(tool);
+    expect(blocked).not.toContain("mcp__claude_ai_Google_Calendar__*");
+    for (const tool of CALENDAR_READ) expect(blocked).not.toContain(tool);
+    for (const tool of CALENDAR_READ) expect(PROFILES.inbox.allow).toContain(tool);
+    expect(CALENDAR_BLOCKED).toEqual(expect.arrayContaining(["create_event", "update_event", "delete_event", "respond_to_event"].map((tool) => `mcp__claude_ai_Google_Calendar__${tool}`)));
+    expect(unexpectedToolUse(PROFILES.inbox, "mcp__claude_ai_Google_Calendar__list_events")).toBe(false);
+    expect(unexpectedToolUse(PROFILES.inbox, "mcp__claude_ai_Google_Calendar__create_event")).toBe(true);
+  });
+  it("doesn't block the calendar up front, and shuts it off entirely if it shows an unknown tool", () => {
+    const listed = "claude.ai Gmail: https://g.example - ✓ Connected\nclaude.ai Google Calendar: https://c.example - ✓ Connected\n";
+    expect(serversFromList(listed)).toEqual([]);
+    expect(otherServers(["mcp__claude_ai_Google_Calendar__new_write_tool"])).toEqual(["claude_ai_Google_Calendar"]);
+  });
+  it("doesn't need the calendar to be signed in", () => {
+    expect(checkTools(PROFILES.inbox, ["ToolSearch", ...GMAIL_READ]).ok).toBe(true);
+    expect(checkTools(PROFILES.inbox, ["ToolSearch", ...GMAIL_READ, ...CALENDAR_READ]).ok).toBe(true);
+    expect(checkTools(PROFILES.inbox, ["ToolSearch", ...GMAIL_READ, "mcp__claude_ai_Google_Calendar__create_event"]).ok).toBe(false);
+  });
+  it("no other agent can reach the calendar", () => {
+    for (const profile of Object.values(PROFILES).filter((profile) => profile.name !== "inbox")) {
+      expect(profile.optionalMcpTools).toBeUndefined();
+      expect(profile.allow.some((rule) => rule.includes("Google_Calendar"))).toBe(false);
+    }
   });
 });
 

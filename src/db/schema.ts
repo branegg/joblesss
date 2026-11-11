@@ -92,6 +92,21 @@ export const inboxFindings = sqliteTable(
   (t) => [uniqueIndex("inbox_message_application").on(t.messageId, t.applicationId), index("inbox_status").on(t.status)],
 );
 
+export const calls = sqliteTable(
+  "calls",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    applicationId: integer("application_id").notNull().references(() => applications.id),
+    at: integer("at", { mode: "timestamp" }).notNull(),
+    source: text("source", { enum: ["manual", "calendar"] }).notNull(),
+    eventId: text("event_id"),
+    title: text("title"),
+    dismissed: integer("dismissed", { mode: "boolean" }).notNull().default(false),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(now),
+  },
+  (t) => [index("calls_application").on(t.applicationId, t.at), uniqueIndex("calls_event").on(t.eventId)],
+);
+
 export const agentRuns = sqliteTable(
   "agent_runs",
   {

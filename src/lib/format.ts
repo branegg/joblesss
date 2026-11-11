@@ -47,3 +47,13 @@ export function parseDay(value: string): Date | undefined {
   const date = new Date(`${value}T00:00:00`);
   return Number.isNaN(date.getTime()) || toDayInput(date) !== value ? undefined : date;
 }
+
+export function formatAgo(date: Date, now: Date = new Date()): string {
+  const start = (value: Date) => new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime();
+  const days = Math.round((start(now) - start(date)) / (24 * 60 * 60 * 1000));
+  if (days <= 0) return "today";
+  if (days === 1) return "yesterday";
+  if (days < 14) return `${days} days ago`;
+  if (days < 60) return `${Math.round(days / 7)} weeks ago`;
+  return `${Math.round(days / 30)} months ago`;
+}

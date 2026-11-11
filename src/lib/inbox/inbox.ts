@@ -2,6 +2,7 @@ import { and, desc, eq, inArray, notInArray } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "../../db";
 import { agentRuns, applications, companies, events, inboxFindings, jobs } from "../../db/schema";
+import { CALENDAR_DAYS_AHEAD, CALENDAR_DAYS_BACK } from "../calls";
 import { canMove, END_STAGES, isEndStage, type Stage } from "../stages";
 import { moveStage } from "../tracker";
 
@@ -33,6 +34,15 @@ export const findingsSchema = z.object({
       quote: z.string().min(1),
     }),
   ),
+  calls: z.array(z.unknown()).optional(),
+});
+
+export const reportedCallSchema = z.object({
+  applicationId: z.number().int(),
+  eventId: z.string().min(1),
+  start: z.string().min(1),
+  title: z.string(),
+  confidence: z.enum(["high", "low"]),
 });
 
 export const FINDINGS_JSON_SCHEMA = {
@@ -54,6 +64,21 @@ export const FINDINGS_JSON_SCHEMA = {
           quote: { type: "string", maxLength: 300 },
         },
         required: ["applicationId", "kind", "confidence", "suspicious", "messageId", "emailDate", "from", "subject", "quote"],
+        additionalProperties: false,
+      },
+    },
+    calls: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          applicationId: { type: "integer" },
+          eventId: { type: "string" },
+          start: { type: "string", description: "The event's start as an ISO 8601 date and time with its offset, exactly as the calendar gives it" },
+          title: { type: "string" },
+          confidence: { type: "string", enum: ["high", "low"] },
+        },
+        required: ["applicationId", "eventId", "start", "title", "confidence"],
         additionalProperties: false,
       },
     },
@@ -91,7 +116,8 @@ export function applicationsToCheck(db: Db) {
 
 export function buildInboxPrompt(rows: ReturnType<typeof applicationsToCheck>): string {
   const list = rows.map(({ id, company, role, stage, searchAfter }) => ({ id, company, role, stage, searchAfter }));
-  return `These are my open job applications. Look for emails about them.\n\n${JSON.stringify(list, null, 1)}`;
+  const day = (offset: number) => new Date(Date.now() + offset * DAY).toISOString().slice(0, 10);
+  return `These are my open job applications. Look for emails about them.\n\n${JSON.stringify(list, null, 1)}\n\nCalendar window: ${day(-CALENDAR_DAYS_BACK)} to ${day(CALENDAR_DAYS_AHEAD)}`;
 }
 
 export type RecordSummary = { proposed: number; applied: number; noChange: number; repeats: number; dropped: number };

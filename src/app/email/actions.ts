@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/db";
-import { checkEmail } from "@/lib/inbox/check";
+import { checkEmail, describeCheck } from "@/lib/inbox/check";
 import { acceptFinding, ignoreFinding, markReplySeen } from "@/lib/inbox/inbox";
 import { canMove } from "@/lib/stages";
 import { readSettings, writeSettings } from "@/lib/settings";
@@ -54,6 +54,5 @@ export async function checkEmailAction(_previous: CheckState, form: FormData): P
   changed();
   if (summary.skipped) return { message: "Nothing to check: you have no open applications." };
   if (!summary.ok) return { error: `The email check stopped: ${summary.reason}. See Agent activity.` };
-  const found = summary.proposed + summary.applied;
-  return { message: found === 0 ? "Checked. Nothing new." : `Checked. ${summary.applied} applied, ${summary.proposed} waiting for your OK.` };
+  return { message: describeCheck(summary) };
 }

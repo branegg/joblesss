@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { and, asc, desc, eq, isNotNull, lte, notInArray, or, sql } from "drizzle-orm";
 import type { Db } from "../db";
-import { applications, companies, events, inboxFindings, jobs } from "../db/schema";
+import { applications, calls, companies, events, inboxFindings, jobs } from "../db/schema";
 import { canMove, END_STAGES, hasBeenSent, isEndStage, STAGE_LABELS, type Stage } from "./stages";
 import { slugify } from "./vault/entries";
 
@@ -210,6 +210,7 @@ export function updateDetails(db: Db, id: number, details: Details): void {
 export function deleteApplication(db: Db, id: number): void {
   db.transaction((tx) => {
     const application = requireApplication(tx, id);
+    tx.delete(calls).where(eq(calls.applicationId, id)).run();
     tx.delete(inboxFindings).where(eq(inboxFindings.applicationId, id)).run();
     tx.delete(events).where(eq(events.applicationId, id)).run();
     tx.delete(applications).where(eq(applications.id, id)).run();

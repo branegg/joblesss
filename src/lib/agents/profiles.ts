@@ -37,13 +37,16 @@ const GMAIL_BLOCKED = [
   "update_message_labels",
 ].map((tool) => `mcp__claude_ai_Gmail__${tool}`);
 
+export const CALENDAR_READ = ["get_event", "list_calendars", "list_events", "search_events"].map((tool) => `mcp__claude_ai_Google_Calendar__${tool}`);
+
+export const CALENDAR_BLOCKED = ["create_event", "delete_event", "respond_to_event", "suggest_time", "update_event"].map((tool) => `mcp__claude_ai_Google_Calendar__${tool}`);
+
 const OTHER_CONNECTORS = [
   "Claude_Docs",
   "Vercel",
   "Supabase",
   "Linear",
   "Google_Drive",
-  "Google_Calendar",
 ].map((server) => `mcp__claude_ai_${server}__*`);
 
 const CHROME_BLOCKED = [
@@ -70,6 +73,7 @@ export type AgentProfile = {
   model: string;
   tools: string[];
   mcpTools?: string[];
+  optionalMcpTools?: string[];
   chrome?: boolean;
   gmail?: boolean;
   allow: string[];
@@ -153,7 +157,8 @@ export const PROFILES: Record<AgentName, AgentProfile> = {
     tools: ["ToolSearch"],
     gmail: true,
     mcpTools: GMAIL_READ,
-    allow: [...GMAIL_READ],
+    optionalMcpTools: CALENDAR_READ,
+    allow: [...GMAIL_READ, ...CALENDAR_READ],
     deny: [],
   },
 };
@@ -180,7 +185,7 @@ export function buildArgs(profile: AgentProfile, options: BuildOptions = {}): st
   ];
   if (profile.gmail) {
     const extra = (options.extraBlockedServers ?? []).map((server) => `mcp__${server}__*`);
-    args.push("--disable-slash-commands", "--disallowedTools", [...GMAIL_BLOCKED, ...OTHER_CONNECTORS, ...extra].join(","));
+    args.push("--disable-slash-commands", "--disallowedTools", [...GMAIL_BLOCKED, ...CALENDAR_BLOCKED, ...OTHER_CONNECTORS, ...extra].join(","));
   } else if (!profile.chrome) {
     args.push("--strict-mcp-config");
   }
@@ -225,7 +230,7 @@ export function serversFromList(output: string): string[] {
     const name = line.match(/^(.+?): .+ - /)?.[1]?.trim();
     if (!name) continue;
     const prefix = name.replace(/[^a-zA-Z0-9_-]/g, "_");
-    if (prefix !== "claude_ai_Gmail") servers.add(prefix);
+    if (prefix !== "claude_ai_Gmail" && prefix !== "claude_ai_Google_Calendar") servers.add(prefix);
   }
   return [...servers];
 }
@@ -233,7 +238,7 @@ export function serversFromList(output: string): string[] {
 export function unexpectedToolUse(profile: AgentProfile, tool: string, options: { structuredOutput?: boolean } = {}): boolean {
   if (tool === "StructuredOutput") return !options.structuredOutput;
   if (profile.chrome && tool.startsWith("mcp__claude-in-chrome__")) return false;
-  return !profile.tools.includes(tool) && !(profile.mcpTools ?? []).includes(tool);
+  return !profile.tools.includes(tool) && !(profile.mcpTools ?? []).includes(tool) && !(profile.optionalMcpTools ?? []).includes(tool);
 }
 
 export type GuardResult = { ok: true } | { ok: false; reason: string; extra: string[]; missing: string[] };
@@ -241,7 +246,7 @@ export type GuardResult = { ok: true } | { ok: false; reason: string; extra: str
 export function checkTools(profile: AgentProfile, sessionTools: string[], options: { structuredOutput?: boolean } = {}): GuardResult {
   const permitted = new Set([...profile.tools, ...(profile.mcpTools ?? []), ...(options.structuredOutput ? ["StructuredOutput"] : [])]);
   const extra = sessionTools.filter((tool) => {
-    if (permitted.has(tool)) return false;
+    if (permitted.has(tool) || (profile.optionalMcpTools ?? []).includes(tool)) return false;
     return !(profile.chrome && tool.startsWith("mcp__claude-in-chrome__"));
   });
   const missing = [...permitted].filter((tool) => !sessionTools.includes(tool));

@@ -16,6 +16,7 @@ export type RunResult = {
   structured?: unknown;
   costUsd?: number;
   reason?: string;
+  sessionTools?: string[];
 };
 
 export function logsDir(): string {
@@ -50,6 +51,7 @@ export async function runAgent(agent: AgentName, options: RunOptions): Promise<R
 
   let outcome: RunResult = { id, status: "failed", reason: "agent exited without a result" };
   let guarded = false;
+  let sessionTools: string[] | undefined;
   let extraBlockedServers = profile.gmail ? await configuredServers(buildEnv(profile) as NodeJS.ProcessEnv) : [];
   let exitCode: number | null = null;
   let stderr = "";
@@ -82,7 +84,8 @@ export async function runAgent(agent: AgentName, options: RunOptions): Promise<R
       }
       if (message.type === "system" && message.subtype === "init" && !guarded) {
         guarded = true;
-        const check = checkTools(profile, (message.tools as string[]) ?? [], { structuredOutput: Boolean(options.jsonSchema) });
+        sessionTools = (message.tools as string[]) ?? [];
+        const check = checkTools(profile, sessionTools, { structuredOutput: Boolean(options.jsonSchema) });
         if (!check.ok) {
           const servers = profile.gmail && attempt < 2 && check.missing.length === 0 ? otherServers(check.extra) : undefined;
           if (servers) {
@@ -112,6 +115,7 @@ export async function runAgent(agent: AgentName, options: RunOptions): Promise<R
           structured: message.structured_output,
           costUsd: message.total_cost_usd as number | undefined,
           reason: message.is_error ? String(message.result ?? message.subtype) : undefined,
+          sessionTools,
         };
       }
     }
