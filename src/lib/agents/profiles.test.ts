@@ -171,3 +171,10 @@ describe("the example settings", () => {
     expect(parseSources(fs.readFileSync("sources.example.yaml", "utf8"), "/home/me").cvFolders).toEqual(["/home/me/Documents/CVs"]);
   });
 });
+
+describe("Gmail tools added later", () => {
+  it("blocks downloading attachments, which the email check never needs", () => {
+    const blocked = flagValue(buildArgs(PROFILES.inbox, { prompt: "x" }), "--disallowedTools").split(",");
+    expect(blocked).toContain("mcp__claude_ai_Gmail__download_gmail_attachment");
+  });
+});

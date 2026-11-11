@@ -10,6 +10,7 @@ const GMAIL_BLOCKED = [
   "apply_sensitive_message_label",
   "apply_sensitive_thread_label",
   "create_draft",
+  "download_gmail_attachment",
   "create_label",
   "delete_draft",
   "delete_label",
